@@ -537,7 +537,9 @@
           badge.textContent = item.provider;
           const time = document.createElement("span");
           time.className = "ref-time";
-          time.textContent = relativeTime(item.discoveredAt);
+          time.textContent = item.postedAt
+            ? `${(Date.now() - new Date(item.postedAt)) / 3.6e6 <= 2 ? "🟢" : (Date.now() - new Date(item.postedAt)) / 3.6e6 <= 24 ? "🟡" : "⚠️"} posted ${relativeTime(item.postedAt)}`
+            : `found ${relativeTime(item.discoveredAt)}`;
           top.append(badge, time);
 
           const title = document.createElement("div");

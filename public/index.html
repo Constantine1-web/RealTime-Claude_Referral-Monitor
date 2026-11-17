@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claude Finder — Real-Time Referral Monitor</title>
+    <style>
+      :root {
+        --bg: #09090b;
+        --panel: #111115;
+        --panel-2: #18181f;
+        --border: #27272f;
+        --text: #f4f4f5;
+        --muted: #a1a1aa;
+        --accent: #d97706;
+        --accent-soft: rgba(217, 119, 6, 0.14);
+        --green: #10b981;
+        --green-soft: rgba(16, 185, 129, 0.14);
+        --red: #ef4444;
+        --red-soft: rgba(239, 68, 68, 0.14);
+        --blue: #3b82f6;
+        --blue-soft: rgba(59, 130, 246, 0.14);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: radial-gradient(circle at top right, rgba(217, 119, 6, 0.08), transparent 36%),
+          radial-gradient(circle at top left, rgba(59, 130, 246, 0.06), transparent 32%),
+          var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        line-height: 1.5;
+      }
+      .container {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 28px 20px 64px;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #f59e0b, #ea580c);
+        display: grid;
+        place-items: center;
+        font-size: 20px;
+        font-weight: 700;
+        box-shadow: 0 8px 24px rgba(234, 88, 12, 0.25);
+      }
+      h1 {
+        font-size: 1.35rem;
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+      .subtitle {
+        margin: 2px 0 0;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      button,
+      .btn {
+        appearance: none;
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        color: var(--text);
+        padding: 9px 14px;
+        border-radius: 10px;
+        font-size: 0.86rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        text-decoration: none;
+        transition: border-color 0.15s, background 0.15s, transform 0.1s;
+      }
+      button:hover:not(:disabled),
+      .btn:hover {
+        border-color: #3f3f4d;
+        background: #20202a;
+      }
+      button:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #f59e0b, #ea580c);
+        border-color: transparent;
+        color: #111;
+      }
+      .btn-primary:hover:not(:disabled) {
+        background: linear-gradient(135deg, #fbbf24, #f97316);
+        border-color: transparent;
+      }
+      .btn-live.active {
+        background: var(--green-soft);
+        border-color: rgba(16, 185, 129, 0.45);
+        color: #6ee7b7;
+      }
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+      .status-pill {
+        font-size: 0.78rem;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .dot.ok {
+        background: var(--green);
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
+      }
+      .dot.err {
+        background: var(--red);
+      }
+      .dot.pulse {
+        animation: pulse 1.6s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+      }
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px 18px;
+      }
+      .kpi-label {
+        font-size: 0.78rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .kpi-val {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin-top: 6px;
+        letter-spacing: -0.02em;
+      }
+      .kpi-sub {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .layout-grid {
+        display: grid;
+        grid-template-columns: 1.55fr 1fr;
+        gap: 18px;
+        align-items: start;
+      }
+      @media (max-width: 900px) {
+        .layout-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .section-head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .section-head h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .filter-chip {
+        padding: 5px 11px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .filter-chip.active {
+        background: var(--accent-soft);
+        border-color: rgba(245, 158, 11, 0.5);
+        color: #fcd34d;
+      }
+      .search-input {
+        flex: 1;
+        min-width: 180px;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text);
+        padding: 7px 12px;
+        font-size: 0.85rem;
+      }
+      .feed-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .ref-item {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .ref-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .badge {
+        font-size: 0.74rem;
+        font-weight: 600;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.35);
+      }
+      .badge.ok {
+        background: var(--green-soft);
+        color: #6ee7b7;
+        border-color: rgba(16, 185, 129, 0.35);
+      }
+      .badge.info {
+        background: var(--blue-soft);
+        color: #93c5fd;
+        border-color: rgba(59, 130, 246, 0.35);
+      }
+      .badge.err {
+        background: var(--red-soft);
+        color: #fca5a5;
+        border-color: rgba(239, 68, 68, 0.35);
+      }
+      .ref-time {
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+      .ref-title {
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--text);
+        word-break: break-word;
+      }
+      .ref-url {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.8rem;
+        color: #fcd34d;
+        background: rgba(0, 0, 0, 0.35);
+        padding: 7px 10px;
+        border-radius: 8px;
+        border: 1px solid #23232c;
+        word-break: break-all;
+      }
+      .ref-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 2px;
+      }
+      .btn-sm {
+        padding: 6px 11px;
+        font-size: 0.78rem;
+        border-radius: 8px;
+      }
+      .source-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .source-item {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 11px 12px;
+      }
+      .source-url {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.75rem;
+        color: var(--text);
+        word-break: break-all;
+        margin-bottom: 6px;
+      }
+      .source-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.76rem;
+        color: var(--muted);
+      }
+      .empty {
+        text-align: center;
+        padding: 36px 16px;
+        color: var(--muted);
+        border: 1px dashed var(--border);
+        border-radius: 12px;
+        font-size: 0.9rem;
+      }
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #18181f;
+        border: 1px solid #3f3f4d;
+        color: var(--text);
+        padding: 11px 16px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.18s, transform 0.18s;
+        pointer-events: none;
+        z-index: 50;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="brand">
+          <div class="logo">⚡</div>
+          <div>
+            <h1>Claude Finder — Referral Monitor</h1>
+            <p class="subtitle">
+              Real-time Reddit RSS &amp; Hacker News referral scanner · Push alerts to Telegram
+            </p>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="liveWatchBtn" class="btn-live" type="button">
+            <span>●</span> Live Watch (30s): OFF
+          </button>
+          <button id="testTelegramBtn" type="button">📨 Test Telegram</button>
+          <button id="scanNowBtn" class="btn-primary" type="button">⚡ Scan Now</button>
+        </div>
+      </header>
+
+      <div class="pill-row">
+        <span class="status-pill"><span id="redisDot" class="dot"></span> <span id="redisLabel">Redis: checking...</span></span>
+        <span class="status-pill"><span id="tgDot" class="dot"></span> <span id="tgLabel">Telegram Bot: checking...</span></span>
+        <span class="status-pill"><span class="dot ok"></span> Cloud Schedule: Every 15m (Vercel Schedules)</span>
+      </div>
+
+      <section class="kpi-grid">
+        <div class="card">
+          <div class="kpi-label">Total Discovered</div>
+          <div class="kpi-val" id="kpiTotal">—</div>
+          <div class="kpi-sub">Unique links deduplicated in Redis</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Active Sources</div>
+          <div class="kpi-val" id="kpiSources">—</div>
+          <div class="kpi-sub" id="kpiHealthySub">Reddit RSS + Global Search + HN</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Last Cloud Scan</div>
+          <div class="kpi-val" id="kpiLastScan">—</div>
+          <div class="kpi-sub" id="kpiTriggerSub">Waiting for first scan</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Last Scan Speed</div>
+          <div class="kpi-val" id="kpiDuration">—</div>
+          <div class="kpi-sub" id="kpiAlertsSub">0 new alerts on last run</div>
+        </div>
+      </section>
+
+      <div class="layout-grid">
+        <section class="card">
+          <div class="section-head">
+            <h2>Discovered Referrals</h2>
+            <span class="ref-time" id="feedCountLabel">0 shown</span>
+          </div>
+          <div class="toolbar">
+            <button class="filter-chip active" data-filter="all" type="button">All</button>
+            <button class="filter-chip" data-filter="Claude" type="button">Claude</button>
+            <button class="filter-chip" data-filter="Anthropic" type="button">Anthropic</button>
+            <button class="filter-chip" data-filter="Perplexity" type="button">Perplexity</button>
+            <button class="filter-chip" data-filter="ChatGPT" type="button">ChatGPT</button>
+            <input
+              id="searchInput"
+              class="search-input"
+              type="search"
+              placeholder="Filter by title or code..."
+            />
+          </div>
+          <div id="feedList" class="feed-list">
+            <div class="empty">Loading referrals...</div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-head">
+            <h2>Source Telemetry</h2>
+            <span class="ref-time">ETag + Rate-Safe</span>
+          </div>
+          <div id="sourceList" class="source-list">
+            <div class="empty">Waiting for scan telemetry...</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+      const state = {
+        data: null,
+        filter: "all",
+        query: "",
+        liveWatch: false,
+        liveTimer: null,
+      };
+
+      const el = (id) => document.getElementById(id);
+
+      function showToast(message) {
+        const toast = el("toast");
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => toast.classList.remove("show"), 3200);
+      }
+
+      function relativeTime(iso) {
+        if (!iso) return "Never";
+        const diffSec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+        if (diffSec < 60) return `${diffSec}s ago`;
+        if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+        if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+        return new Date(iso).toLocaleDateString();
+      }
+
+      function renderFeed() {
+        const list = el("feedList");
+        const items = state.data?.recentReferrals || [];
+        const q = state.query.trim().toLowerCase();
+
+        const filtered = items.filter((item) => {
+          const matchesProvider =
+            state.filter === "all" ||
+            item.provider.toLowerCase().includes(state.filter.toLowerCase());
+          const matchesQuery =
+            !q ||
+            item.sourceTitle?.toLowerCase().includes(q) ||
+            item.url?.toLowerCase().includes(q) ||
+            item.provider?.toLowerCase().includes(q);
+          return matchesProvider && matchesQuery;
+        });
+
+        el("feedCountLabel").textContent = `${filtered.length} shown`;
+        list.innerHTML = "";
+
+        if (filtered.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent =
+            items.length === 0
+              ? 'No referral links captured yet. Click "Scan Now" or enable Live Watch to start scanning.'
+              : "No referrals match your current filter.";
+          list.appendChild(empty);
+          return;
+        }
+
+        for (const item of filtered) {
+          const card = document.createElement("article");
+          card.className = "ref-item";
+
+          const top = document.createElement("div");
+          top.className = "ref-top";
+          const badge = document.createElement("span");
+          badge.className = "badge";
+          badge.textContent = item.provider;
+          const time = document.createElement("span");
+          time.className = "ref-time";
+          time.textContent = relativeTime(item.discoveredAt);
+          top.append(badge, time);
+
+          const title = document.createElement("div");
+          title.className = "ref-title";
+          title.textContent = item.sourceTitle || "Discovered Referral";
+
+          const urlBox = document.createElement("div");
+          urlBox.className = "ref-url";
+          urlBox.textContent = item.url;
+
+          const actions = document.createElement("div");
+          actions.className = "ref-actions";
+
+          const claimLink = document.createElement("a");
+          claimLink.className = "btn btn-primary btn-sm";
+          claimLink.href = item.url;
+          claimLink.target = "_blank";
+          claimLink.rel = "noopener noreferrer";
+          claimLink.textContent = "🚀 Claim Referral";
+
+          const srcLink = document.createElement("a");
+          srcLink.className = "btn btn-sm";
+          srcLink.href = item.sourcePermalink || item.url;
+          srcLink.target = "_blank";
+          srcLink.rel = "noopener noreferrer";
+          srcLink.textContent = "💬 View Source";
+
+          const copyBtn = document.createElement("button");
+          copyBtn.className = "btn-sm";
+          copyBtn.type = "button";
+          copyBtn.textContent = "📋 Copy Link";
+          copyBtn.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(item.url);
+              showToast("Referral URL copied to clipboard!");
+            } catch {
+              showToast("Could not copy automatically — select the URL text.");
+            }
+          });
+
+          actions.append(claimLink, srcLink, copyBtn);
+          card.append(top, title, urlBox, actions);
+          list.appendChild(card);
+        }
+      }
+
+      function renderSources() {
+        const container = el("sourceList");
+        container.innerHTML = "";
+        const lastSources = state.data?.lastRun?.sources;
+        const configured = state.data?.configuredSources || [];
+        const items =
+          lastSources && lastSources.length > 0
+            ? lastSources
+            : configured.map((url) => ({ url, state: "pending", status: null, durationMs: null }));
+
+        if (items.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = "No sources configured.";
+          container.appendChild(empty);
+          return;
+        }
+
+        for (const src of items) {
+          const box = document.createElement("div");
+          box.className = "source-item";
+
+          const urlDiv = document.createElement("div");
+          urlDiv.className = "source-url";
+          urlDiv.textContent = src.url.replace(/^https?:\/\//, "");
+
+          const meta = document.createElement("div");
+          meta.className = "source-meta";
+
+          const badge = document.createElement("span");
+          if (src.state === "ok") {
+            badge.className = "badge ok";
+            badge.textContent = `200 OK · ${src.scannedMatches || 0} matches`;
+          } else if (src.state === "not_modified") {
+            badge.className = "badge info";
+            badge.textContent = "304 Not Modified";
+          } else if (src.state === "pending") {
+            badge.className = "badge";
+            badge.textContent = "Ready";
+          } else {
+            badge.className = "badge err";
+            badge.textContent = src.status ? `HTTP ${src.status}` : src.state || "Error";
+          }
+
+          const right = document.createElement("span");
+          right.textContent = src.durationMs != null ? `${src.durationMs}ms` : "—";
+
+          meta.append(badge, right);
+          box.append(urlDiv, meta);
+          container.appendChild(box);
+        }
+      }
+
+      function renderAll() {
+        const d = state.data;
+        if (!d) return;
+
+        el("redisDot").className = `dot ${d.redisConfigured ? "ok" : "err"}`;
+        el("redisLabel").textContent = d.redisConfigured
+          ? "Upstash Redis: Connected"
+          : "Upstash Redis: Not Configured";
+
+        el("tgDot").className = `dot ${d.telegramConfigured ? "ok" : "err"}`;
+        el("tgLabel").textContent = d.telegramConfigured
+          ? "Telegram Bot: Ready"
+          : "Telegram Bot: Missing Config";
+
+        el("kpiTotal").textContent = String(d.totalFound ?? 0);
+        el("kpiSources").textContent = String((d.configuredSources || []).length);
+
+        const last = d.lastRun;
+        if (last) {
+          el("kpiLastScan").textContent = relativeTime(last.ranAt);
+          el("kpiTriggerSub").textContent = `Trigger: ${last.trigger || "manual"}`;
+          el("kpiDuration").textContent = `${last.durationMs || 0}ms`;
+          el("kpiAlertsSub").textContent = `${last.totalNewAlerts || 0} new alerts on last run`;
+          const okCount = (last.sources || []).filter(
+            (s) => s.state === "ok" || s.state === "not_modified"
+          ).length;
+          el("kpiHealthySub").textContent = `${okCount}/${(last.sources || []).length} healthy`;
+        } else {
+          el("kpiLastScan").textContent = "Never";
+          el("kpiDuration").textContent = "—";
+        }
+
+        renderFeed();
+        renderSources();
+      }
+
+      async function loadStatus() {
+        try {
+          const resp = await fetch("/api/status", { cache: "no-store" });
+          const data = await resp.json();
+          if (data.ok) {
+            state.data = data;
+            renderAll();
+          }
+        } catch (err) {
+          console.error("Status fetch error:", err);
+        }
+      }
+
+      async function triggerScan(trigger = "manual") {
+        const btn = el("scanNowBtn");
+        btn.disabled = true;
+        btn.textContent = "Scanning...";
+        try {
+          const resp = await fetch("/api/scan", {
+            method: "POST",
+            headers: { "x-scan-trigger": trigger },
+          });
+          const result = await resp.json();
+          if (!resp.ok || !result.ok) {
+            showToast(result.error || "Scan failed");
+            return;
+          }
+          if (result.cached) {
+            if (trigger === "manual") {
+              showToast(`Using fresh scan (${result.cooldownRemaining}s cooldown)`);
+            }
+          } else {
+            const found = result.summary?.totalNewAlerts || 0;
+            showToast(
+              found > 0
+                ? `Found ${found} new referral(s)! Telegram alert sent.`
+                : `Scan complete in ${result.summary?.durationMs || 0}ms — no new links yet.`
+            );
+          }
+          await loadStatus();
+        } catch (err) {
+          showToast("Network error running scan.");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "⚡ Scan Now";
+        }
+      }
+
+      async function sendTestTelegram() {
+        const btn = el("testTelegramBtn");
+        btn.disabled = true;
+        try {
+          const resp = await fetch("/api/test-telegram", { method: "POST" });
+          const data = await resp.json();
+          if (resp.ok && data.ok) {
+            showToast("Test ping sent to your Telegram!");
+          } else {
+            showToast(data.error || "Failed to send Telegram test.");
+          }
+        } catch {
+          showToast("Network error sending Telegram test.");
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      function toggleLiveWatch() {
+        state.liveWatch = !state.liveWatch;
+        const btn = el("liveWatchBtn");
+        if (state.liveWatch) {
+          btn.classList.add("active");
+          btn.innerHTML = '<span class="dot ok pulse"></span> Live Watch (30s): ON';
+          triggerScan("live-watch");
+          state.liveTimer = setInterval(() => triggerScan("live-watch"), 30000);
+          showToast("Live Watch enabled — scanning every 30s while this tab stays open.");
+        } else {
+          btn.classList.remove("active");
+          btn.innerHTML = "<span>●</span> Live Watch (30s): OFF";
+          clearInterval(state.liveTimer);
+          state.liveTimer = null;
+        }
+      }
+
+      el("scanNowBtn").addEventListener("click", () => triggerScan("manual"));
+      el("testTelegramBtn").addEventListener("click", sendTestTelegram);
+      el("liveWatchBtn").addEventListener("click", toggleLiveWatch);
+      el("searchInput").addEventListener("input", (e) => {
+        state.query = e.target.value;
+        renderFeed();
+      });
+      document.querySelectorAll(".filter-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          document.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("active"));
+          chip.classList.add("active");
+          state.filter = chip.dataset.filter;
+          renderFeed();
+        });
+      });
+
+      loadStatus();
+      setInterval(() => {
+        if (state.data) renderAll();
+      }, 10000);
+    </script>
+  </body>
+</html>

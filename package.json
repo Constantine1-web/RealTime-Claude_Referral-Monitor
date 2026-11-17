@@ -11,5 +11,9 @@
   },
   "engines": {
     "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.41.0",
+    "@vercel/schedules": "^0.0.3"
   }
 }

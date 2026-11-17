@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # Local SQLite database & WAL files
 referrals.db
@@ -17,6 +18,7 @@ node_modules/
 dist/
 build/
 .vercel/
+.vercel
 
 # Python artifacts
 __pycache__/
@@ -28,3 +30,5 @@ venv/
 .DS_Store
 Thumbs.db
 *.log
+
+.env*

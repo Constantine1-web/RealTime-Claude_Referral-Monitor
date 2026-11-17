@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/scheduled-scan.mjs": {
+      "maxDuration": 60,
+      "experimentalTriggers": [
+        {
+          "type": "schedule/v1beta"
+        }
+      ]
+    },
+    "api/scan.mjs": {
+      "maxDuration": 60
+    }
+  },
+  "schedules": {
+    "referral-poll": {
+      "schedule": "*/15 * * * *",
+      "function": "api/scheduled-scan"
+    }
+  }
+}

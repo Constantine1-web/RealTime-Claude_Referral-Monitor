@@ -1,46 +1,37 @@
 # RealTime-Claude_Referral-Monitor
 
-A resilient background referral monitor that polls public sources (Reddit Atom RSS/JSON feeds and Hacker News real-time search API) for fresh referral links (Claude Pro trials, Anthropic invites, Perplexity, ChatGPT), deduplicates them atomically in SQLite WAL, and pushes instant alerts with inline action buttons via a Telegram Bot.
+A real-time referral monitor & live web dashboard that scans Reddit RSS feeds, global Reddit search, and Hacker News for fresh referral links (Claude Pro trials, Anthropic invites, Perplexity, ChatGPT), deduplicates them atomically in **Upstash Redis** (on Vercel) or **SQLite WAL** (locally), and fires instant Telegram alerts with inline action buttons.
 
-Includes both a **zero-dependency Node.js (>= 22.5 / 24 LTS) implementation** (`monitor.mjs`) and an **async Python implementation** (`monitor.py`).
+## Architecture
 
-## Features
+- **Web Dashboard ([public/index.html](public/index.html))**: Live status bar, KPI telemetry, provider filtering, **Scan Now** button, **Live Watch (30s)** auto-scanner, and **Test Telegram** button.
+- **Vercel Functions ([api/](api/))**:
+  - `GET /api/status` — Returns recent referrals, total count, and latest source telemetry from Upstash Redis.
+  - `POST /api/scan` — Runs an on-demand scan across all sources (protected by a 15s Redis cooldown lock).
+  - `POST /api/test-telegram` — Sends a test ping to Telegram (protected by a 60s Redis cooldown lock).
+  - `POST /api/scheduled-scan` — Private **Vercel Schedules** target (`schedule/v1beta`, every 15 minutes on Hobby, idempotent via `executionId`).
+- **Shared Core ([lib/core.mjs](lib/core.mjs), [lib/redis-store.mjs](lib/redis-store.mjs), [lib/scanner.mjs](lib/scanner.mjs))**: Regex extraction, entity decoding, Atom/RSS & JSON parsing, ETag/`Last-Modified` HTTP caching, and Telegram `MarkdownV2` inline buttons.
+- **Local CLI Worker ([monitor.mjs](monitor.mjs))**: Continuous 15-second background polling locally (automatically syncs with Upstash Redis if `.env.local` is pulled, or falls back to local SQLite).
 
-- **Rate-Limit Resilient Polling (`SourcePoller`):**
-  - Uses `ETag` (`If-None-Match`) and `Last-Modified` (`If-Modified-Since`) headers so unchanged feeds return `304 Not Modified`.
-  - Respects `x-ratelimit-remaining`, `x-ratelimit-reset`, and `Retry-After` headers with jittered exponential backoff.
-  - Supports automatic fallback from `.json` to `old.reddit.com/.rss` Atom feeds + Hacker News Algolia real-time search.
-- **Regex Extraction & Normalization (`extractReferrals`):**
-  - Unescapes HTML entities and normalizes varied invite URLs (`claude.ai/referral/...`, `claude.ai/invite/...`) into canonical keys so the same referral is never sent twice.
-- **Atomic SQLite Deduplication (`DeduplicationStore`):**
-  - Uses SQLite in `WAL` mode (`node:sqlite` in Node.js / `sqlite3` in Python) with `INSERT OR IGNORE` to guarantee atomic deduplication.
-- **Instant Telegram Alerts (`TelegramNotifier`):**
-  - Sends `MarkdownV2`-formatted alerts with **Inline Keyboard Buttons** (`🚀 Claim Referral` and `💬 View Source`) and automatic `chat_id` detection (`--test-telegram`).
-
-## Quick Start (Node.js — Zero Dependencies)
-
-Requires **Node.js 22.5+** (built & tested on Node.js 24 LTS).
+## Local Setup & Tests
 
 ```powershell
-# 1. Run unit tests
+npm.cmd install
 node --test test_monitor.mjs
+```
 
-# 2. Configure environment variables
-Copy-Item .env.example .env
-# Edit .env with your TELEGRAM_BOT_TOKEN
+Run locally with your `.env` / `.env.local`:
 
-# 3. Auto-detect TELEGRAM_CHAT_ID & verify Telegram delivery
+```powershell
+# Verify Telegram delivery
 node monitor.mjs --test-telegram
 
-# 4. Run continuous monitoring
+# Continuous local 15-second polling
 node monitor.mjs
 ```
 
-## Quick Start (Python)
+## Vercel Deployment
 
-```powershell
-pip install -r requirements.txt
-Copy-Item .env.example .env
-python -m unittest test_monitor.py -v
-python monitor.py
-```
+1. Link the project (`vercel link`) and provision Upstash Redis (`vercel install upstash/upstash-kv`).
+2. Pull environment variables (`vercel env pull .env.local --yes`).
+3. Deploy via Git push to `main` or `vercel --prod`.

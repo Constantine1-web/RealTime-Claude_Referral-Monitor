@@ -1,0 +1,30 @@
+# Secrets & environment files
+.env
+.env.local
+.env.*.local
+
+# Local SQLite database & WAL files
+referrals.db
+referrals.db-shm
+referrals.db-wal
+*.db
+*.db-shm
+*.db-wal
+
+# Dependencies & build outputs
+node_modules/
+.next/
+dist/
+build/
+.vercel/
+
+# Python artifacts
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS & logs
+.DS_Store
+Thumbs.db
+*.log

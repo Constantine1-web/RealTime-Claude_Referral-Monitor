@@ -1,0 +1,15 @@
+{
+  "name": "constantine-referral-monitor",
+  "version": "2.0.0",
+  "description": "Real-time referral monitor with ETag caching, SQLite deduplication, and Telegram inline alerts",
+  "type": "module",
+  "main": "monitor.mjs",
+  "scripts": {
+    "start": "node monitor.mjs",
+    "once": "node monitor.mjs --once",
+    "test": "node --test test_monitor.mjs"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}
